@@ -1,0 +1,7 @@
+{
+  "name": "Boiler Card",
+  "filename": "boiler-card.js",
+  "render_readme": true,
+  "content_in_root": true,
+  "type": "lovelace"
+}

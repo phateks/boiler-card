@@ -13,12 +13,8 @@ class BoilerCard extends HTMLElement {
     const outTemp = hass.states[c.entities.out]?.state ?? "--";
     const inTemp = hass.states[c.entities.in]?.state ?? "--";
     const pressure = hass.states[c.entities.pressure]?.state ?? "--";
-    const acm = c.entities.acm_temp
-      ? hass.states[c.entities.acm_temp]
-      : null;
-    const heat = c.entities.heat_temp
-      ? hass.states[c.entities.heat_temp]
-      : null;
+    const acm = c.entities.acm_temp ? hass.states[c.entities.acm_temp] : null;
+    const heat = c.entities.heat_temp ? hass.states[c.entities.heat_temp] : null;
 
     root.innerHTML = `
       <style>
@@ -62,7 +58,14 @@ class BoilerCard extends HTMLElement {
           top: ${c.flame_top || "120px"};
           font-size: ${c.flame_size || "60px"};
           color: ${flameState ? "red" : "#444"};
+          animation: ${flameState ? "pulse 1s infinite" : "none"};
           transition: color 0.3s ease;
+        }
+
+        @keyframes pulse {
+          0% { opacity: 0.7; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.15); }
+          100% { opacity: 0.7; transform: scale(1); }
         }
 
         .temps {
@@ -91,6 +94,10 @@ class BoilerCard extends HTMLElement {
           user-select: none;
         }
 
+        .btn:hover {
+          background: rgba(255,255,255,0.2);
+        }
+
         .value {
           font-size: 1.2em;
           font-weight: bold;
@@ -106,13 +113,24 @@ class BoilerCard extends HTMLElement {
         <div class="temps">
           <div class="temp-block">
             <div class="btn" id="acm_up">+</div>
-            <div class="value">${acm ? acm.attributes.temperature ?? acm.state : "--"}°C</div>
+            <div class="value">
+              ${
+                acm
+                  ? (acm.attributes.current_temperature ??
+                     acm.attributes.temperature ??
+                     acm.state)
+                  : "--"
+              }°C
+            </div>
             <div>ACM</div>
             <div class="btn" id="acm_down">−</div>
           </div>
+
           <div class="temp-block">
             <div class="btn" id="heat_up">+</div>
-            <div class="value">${heat ? heat.state : "--"}°C</div>
+            <div class="value">
+              ${heat ? heat.state : "--"}°C
+            </div>
             <div>Heat</div>
             <div class="btn" id="heat_down">−</div>
           </div>
@@ -120,6 +138,7 @@ class BoilerCard extends HTMLElement {
       </div>
     `;
 
+    // Event handlers
     root.querySelector("#acm_up")?.addEventListener("click", () =>
       this._adjustTemp(hass, c.entities.acm_temp, true)
     );
@@ -139,8 +158,18 @@ class BoilerCard extends HTMLElement {
     const state = hass.states[entityId];
     if (!state) return;
 
+    // water_heater entity
+    if (entityId.startsWith("water_heater.")) {
+      const current = state.attributes.temperature ?? state.attributes.current_temperature ?? state.state;
+      const newTemp = increase ? Number(current) + 1 : Number(current) - 1;
+      hass.callService("water_heater", "set_temperature", {
+        entity_id: entityId,
+        temperature: newTemp,
+      });
+    }
+
     // climate entity
-    if (entityId.startsWith("climate.")) {
+    else if (entityId.startsWith("climate.")) {
       const current = state.attributes.temperature ?? state.state;
       const newTemp = increase ? Number(current) + 1 : Number(current) - 1;
       hass.callService("climate", "set_temperature", {
@@ -150,11 +179,8 @@ class BoilerCard extends HTMLElement {
     }
 
     // input_number or number entity
-    else if (
-      entityId.startsWith("input_number.") ||
-      entityId.startsWith("number.")
-    ) {
-      const domain = "input_number";
+    else if (entityId.startsWith("input_number.") || entityId.startsWith("number.")) {
+      const domain = entityId.split(".")[0];
       hass.callService(domain, increase ? "increment" : "decrement", {
         entity_id: entityId,
       });
@@ -171,5 +197,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "boiler-card",
   name: "Boiler Card",
-  description: "Smart boiler control panel with flame and temperature controls.",
+  description: "Smart boiler control panel with flame animation and temperature controls.",
 });

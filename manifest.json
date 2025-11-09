@@ -1,0 +1,11 @@
+{
+  "domain": "boiler_card",
+  "name": "Boiler Card",
+  "version": "1.0.0",
+  "documentation": "https://github.com/phateks/boiler-card",
+  "requirements": [],
+  "codeowners": ["@phateks"],
+  "content_in_root": true,
+  "frontend": true,
+  "render_readme": true
+}

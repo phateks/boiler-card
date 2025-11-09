@@ -1,145 +1,175 @@
 class BoilerCard extends HTMLElement {
   setConfig(config) {
-    if (!config) throw new Error("Config required");
+    if (!config.image) throw new Error("Image path is required.");
     this.config = config;
+    this.attachShadow({ mode: "open" });
+  }
 
-    const card = document.createElement("ha-card");
-    card.style.position = "relative";
-    card.style.overflow = "hidden";
-    card.style.backgroundImage = `url(${config.image || "/local/boiler-card/boiler_base.png"})`;
-    card.style.backgroundSize = "contain";
-    card.style.backgroundRepeat = "no-repeat";
-    card.style.backgroundPosition = "center";
-    card.style.height = config.height || "420px";
+  set hass(hass) {
+    const c = this.config;
+    const root = this.shadowRoot;
+    if (!root) return;
+    const flameState = hass.states[c.entities.flame]?.state === "on";
+    const outTemp = hass.states[c.entities.out]?.state ?? "--";
+    const inTemp = hass.states[c.entities.in]?.state ?? "--";
+    const pressure = hass.states[c.entities.pressure]?.state ?? "--";
+    const acm = c.entities.acm_temp
+      ? hass.states[c.entities.acm_temp]
+      : null;
+    const heat = c.entities.heat_temp
+      ? hass.states[c.entities.heat_temp]
+      : null;
 
-    const overlay = document.createElement("div");
-    overlay.style.position = "absolute";
-    overlay.style.top = 0;
-    overlay.style.left = 0;
-    overlay.style.right = 0;
-    overlay.style.bottom = 0;
-
-    overlay.innerHTML = `
+    root.innerHTML = `
       <style>
-        .flame {
-          position: absolute;
-          top: ${config.flame_top || "110px"};
-          left: ${config.flame_left || "50%"};
-          transform: translateX(-50%);
-          font-size: ${config.flame_size || "64px"};
-          color: var(--disabled-text-color);
-          transition: color 0.3s ease;
+        .boiler-card {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: url(${c.image}) no-repeat center/contain;
+          width: 300px;
+          height: 480px;
+          color: #fff;
+          font-family: "Segoe UI", sans-serif;
         }
-        .temp-out, .temp-in {
+
+        .out, .in, .pressure {
           position: absolute;
-          top: ${config.temp_top || "60px"};
           font-weight: bold;
-          font-size: ${config.temp_font || "18px"};
         }
-        .temp-out {
-          left: ${config.temp_out_left || "20%"};
+
+        .out {
+          top: ${c.temp_top || "50px"};
+          left: ${c.temp_out_left || "17%"};
           color: #ff6600;
         }
-        .temp-in {
-          right: ${config.temp_in_right || "20%"};
-          color: #0080ff;
+
+        .in {
+          top: ${c.temp_top || "50px"};
+          right: ${c.temp_in_right || "17%"};
+          color: #33a1ff;
         }
+
         .pressure {
-          position: absolute;
-          top: ${config.pressure_top || "190px"};
-          left: 50%;
-          transform: translateX(-50%);
-          font-size: 20px;
-          color: #333;
+          top: ${c.pressure_top || "185px"};
+          color: #ddd;
+          font-size: 1.2em;
         }
-        .display {
+
+        .flame {
           position: absolute;
-          bottom: 30px;
-          left: 50%;
-          transform: translateX(-50%);
+          top: ${c.flame_top || "120px"};
+          font-size: ${c.flame_size || "60px"};
+          color: ${flameState ? "red" : "#444"};
+          transition: color 0.3s ease;
+        }
+
+        .temps {
+          position: absolute;
+          bottom: 20px;
           display: flex;
-          gap: 40px;
+          width: 80%;
+          justify-content: space-around;
         }
-        .zone {
+
+        .temp-block {
           text-align: center;
-          color: white;
-          font-size: 16px;
         }
+
         .btn {
-          display: inline-block;
-          width: 24px;
-          height: 24px;
-          line-height: 24px;
           background: rgba(255,255,255,0.1);
           border: 1px solid rgba(255,255,255,0.3);
-          border-radius: 4px;
+          border-radius: 5px;
+          width: 30px;
+          height: 30px;
+          color: white;
+          font-size: 1.2em;
+          line-height: 30px;
+          margin: 3px;
           cursor: pointer;
           user-select: none;
         }
+
+        .value {
+          font-size: 1.2em;
+          font-weight: bold;
+        }
       </style>
 
-      <div class="temp-out" id="out">OUT: --°C</div>
-      <div class="temp-in" id="in">IN: --°C</div>
-      <ha-icon icon="mdi:fire" class="flame" id="flame"></ha-icon>
-      <div class="pressure" id="pressure">-- bar</div>
-      <div class="display">
-        <div class="zone">
-          <div class="btn" id="acm-plus">+</div>
-          <div id="acm-val">--°C</div>
-          <div>ACM</div>
-          <div class="btn" id="acm-minus">–</div>
-        </div>
-        <div class="zone">
-          <div class="btn" id="heat-plus">+</div>
-          <div id="heat-val">--°C</div>
-          <div>Heat</div>
-          <div class="btn" id="heat-minus">–</div>
+      <div class="boiler-card">
+        <div class="out">OUT: ${outTemp}°C</div>
+        <div class="in">IN: ${inTemp}°C</div>
+        <ha-icon class="flame" icon="mdi:fire"></ha-icon>
+        <div class="pressure">${pressure} bar</div>
+
+        <div class="temps">
+          <div class="temp-block">
+            <div class="btn" id="acm_up">+</div>
+            <div class="value">${acm ? acm.attributes.temperature ?? acm.state : "--"}°C</div>
+            <div>ACM</div>
+            <div class="btn" id="acm_down">−</div>
+          </div>
+          <div class="temp-block">
+            <div class="btn" id="heat_up">+</div>
+            <div class="value">${heat ? heat.state : "--"}°C</div>
+            <div>Heat</div>
+            <div class="btn" id="heat_down">−</div>
+          </div>
         </div>
       </div>
     `;
 
-    card.appendChild(overlay);
-    this.appendChild(card);
+    root.querySelector("#acm_up")?.addEventListener("click", () =>
+      this._adjustTemp(hass, c.entities.acm_temp, true)
+    );
+    root.querySelector("#acm_down")?.addEventListener("click", () =>
+      this._adjustTemp(hass, c.entities.acm_temp, false)
+    );
+    root.querySelector("#heat_up")?.addEventListener("click", () =>
+      this._adjustTemp(hass, c.entities.heat_temp, true)
+    );
+    root.querySelector("#heat_down")?.addEventListener("click", () =>
+      this._adjustTemp(hass, c.entities.heat_temp, false)
+    );
   }
 
-  set hass(hass) {
-    const cfg = this.config;
-    const flameEl = this.querySelector("#flame");
-    const outEl = this.querySelector("#out");
-    const inEl = this.querySelector("#in");
-    const pEl = this.querySelector("#pressure");
-    const acmVal = this.querySelector("#acm-val");
-    const heatVal = this.querySelector("#heat-val");
+  _adjustTemp(hass, entityId, increase = true) {
+    if (!entityId) return;
+    const state = hass.states[entityId];
+    if (!state) return;
 
-    const getState = id => (id && hass.states[id]) ? hass.states[id].state : "--";
+    // climate entity
+    if (entityId.startsWith("climate.")) {
+      const current = state.attributes.temperature ?? state.state;
+      const newTemp = increase ? Number(current) + 1 : Number(current) - 1;
+      hass.callService("climate", "set_temperature", {
+        entity_id: entityId,
+        temperature: newTemp,
+      });
+    }
 
-    const flameState = getState(cfg.entities.flame);
-    const outTemp = getState(cfg.entities.out);
-    const inTemp = getState(cfg.entities.in);
-    const press = getState(cfg.entities.pressure);
-    const acm = getState(cfg.entities.acm_temp);
-    const heat = getState(cfg.entities.heat_temp);
-
-    flameEl.style.color = (flameState === "on") ? "#ff3b00" : "rgba(0,0,0,0.2)";
-    outEl.textContent = `OUT: ${outTemp}°C`;
-    inEl.textContent = `IN: ${inTemp}°C`;
-    pEl.textContent = `${press} bar`;
-    acmVal.textContent = `${acm}°C`;
-    heatVal.textContent = `${heat}°C`;
-
-    // Buttons
-    const send = (service, entity) => {
-      const [domain, name] = service.split(".");
-      hass.callService(domain, name, { entity_id: entity });
-    };
-
-    this.querySelector("#acm-plus").onclick = () => send(cfg.services.acm_up, cfg.entities.acm_temp);
-    this.querySelector("#acm-minus").onclick = () => send(cfg.services.acm_down, cfg.entities.acm_temp);
-    this.querySelector("#heat-plus").onclick = () => send(cfg.services.heat_up, cfg.entities.heat_temp);
-    this.querySelector("#heat-minus").onclick = () => send(cfg.services.heat_down, cfg.entities.heat_temp);
+    // input_number or number entity
+    else if (
+      entityId.startsWith("input_number.") ||
+      entityId.startsWith("number.")
+    ) {
+      const domain = "input_number";
+      hass.callService(domain, increase ? "increment" : "decrement", {
+        entity_id: entityId,
+      });
+    }
   }
 
-  getCardSize() { return 4; }
+  getCardSize() {
+    return 4;
+  }
 }
 
 customElements.define("boiler-card", BoilerCard);
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "boiler-card",
+  name: "Boiler Card",
+  description: "Smart boiler control panel with flame and temperature controls.",
+});

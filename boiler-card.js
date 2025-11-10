@@ -7,73 +7,73 @@ class BoilerCard extends HTMLElement {
   set hass(hass) {
     const config = this.config;
 
-    // creează cardul o singură dată
     if (!this.card) {
       this.card = document.createElement("ha-card");
-      this.card.style.padding = "16px";
+      this.card.style.padding = "8px";
       this.card.style.display = "flex";
       this.card.style.flexDirection = "column";
       this.card.style.alignItems = "center";
       this.card.style.justifyContent = "center";
       this.card.style.background =
-        "linear-gradient(to bottom, #f6f6f6 70%, #2a2a2a 70%)";
+        "linear-gradient(to bottom, #f6f6f6 65%, #2a2a2a 65%)";
       this.card.style.borderRadius = "16px";
       this.card.style.overflow = "hidden";
+      this.card.style.maxWidth = "260px";   // mai îngust
+      this.card.style.margin = "0 auto";
 
-      // wrapper general
       const wrapper = document.createElement("div");
       wrapper.style.textAlign = "center";
       wrapper.style.width = "100%";
-      wrapper.style.maxWidth = "320px";
       wrapper.style.position = "relative";
 
-      // OUT / IN temps
+      // OUT / IN
       this.outTemp = document.createElement("div");
       this.inTemp = document.createElement("div");
       this.outTemp.style.position = this.inTemp.style.position = "absolute";
-      this.outTemp.style.left = "10px";
-      this.inTemp.style.right = "10px";
-      this.outTemp.style.top = this.inTemp.style.top = "10px";
+      this.outTemp.style.left = "8px";
+      this.inTemp.style.right = "8px";
+      this.outTemp.style.top = this.inTemp.style.top = "6px";
       this.outTemp.style.color = "orange";
       this.inTemp.style.color = "dodgerblue";
       this.outTemp.style.fontWeight = this.inTemp.style.fontWeight = "bold";
-      this.outTemp.style.fontSize = this.inTemp.style.fontSize = "18px";
+      this.outTemp.style.fontSize = this.inTemp.style.fontSize = "14px";
 
-      // flacară + presiune
+      // flacără + presiune
       this.flame = document.createElement("div");
       this.flame.innerHTML = "🔥";
-      this.flame.style.fontSize = "100px";
-      this.flame.style.marginTop = "60px";
+      this.flame.style.fontSize = "70px";     // mai mică
+      this.flame.style.marginTop = "40px";
+
       this.pressure = document.createElement("div");
-      this.pressure.style.fontSize = "18px";
-      this.pressure.style.marginTop = "10px";
+      this.pressure.style.fontSize = "14px";
+      this.pressure.style.marginTop = "4px";
       this.pressure.style.color = "#444";
 
-      // secțiunea de control jos
+      // zona de control
       const controls = document.createElement("div");
       controls.style.display = "flex";
       controls.style.justifyContent = "space-between";
       controls.style.width = "100%";
-      controls.style.padding = "20px 10px 10px 10px";
+      controls.style.padding = "12px 8px 4px 8px";
 
       const createBlock = (label) => {
         const block = document.createElement("div");
         block.style.display = "flex";
         block.style.flexDirection = "column";
         block.style.alignItems = "center";
-        block.style.gap = "8px";
-        block.style.width = "45%";
+        block.style.gap = "6px";
+        block.style.width = "48%";
 
         const plus = document.createElement("button");
         plus.innerText = "+";
         const minus = document.createElement("button");
-        minus.innerText = "-";
+        minus.innerText = "−";
 
         [plus, minus].forEach((btn) => {
-          btn.style.width = "60px";
-          btn.style.height = "60px";
-          btn.style.fontSize = "30px";
-          btn.style.borderRadius = "12px";
+          btn.style.width = "48px";
+          btn.style.height = "48px";
+          btn.style.fontSize = "26px";
+          btn.style.borderRadius = "10px";
           btn.style.border = "1px solid #555";
           btn.style.background = "#333";
           btn.style.color = "#fff";
@@ -85,18 +85,18 @@ class BoilerCard extends HTMLElement {
 
         const display = document.createElement("div");
         display.style.fontFamily = "'Courier New', monospace";
-        display.style.fontSize = "36px";
+        display.style.fontSize = "26px";
         display.style.color = "#00ff66";
         display.style.background = "#000";
-        display.style.padding = "8px 18px";
-        display.style.borderRadius = "8px";
-        display.style.boxShadow = "0 0 8px #00ff66 inset";
+        display.style.padding = "4px 12px";
+        display.style.borderRadius = "6px";
+        display.style.boxShadow = "0 0 6px #00ff66 inset";
 
         const labelEl = document.createElement("div");
         labelEl.innerText = label;
         labelEl.style.color = "#fff";
         labelEl.style.fontWeight = "500";
-        labelEl.style.marginBottom = "4px";
+        labelEl.style.fontSize = "13px";
 
         block.appendChild(plus);
         block.appendChild(display);
@@ -115,7 +115,6 @@ class BoilerCard extends HTMLElement {
       controls.appendChild(this.acmBlock);
       controls.appendChild(this.heatBlock);
 
-      // finalizare layout
       wrapper.appendChild(this.outTemp);
       wrapper.appendChild(this.inTemp);
       wrapper.appendChild(this.flame);
@@ -125,7 +124,7 @@ class BoilerCard extends HTMLElement {
       this.appendChild(this.card);
     }
 
-    // actualizare din Home Assistant
+    // --- actualizare din HA ---
     const getState = (id) => hass.states[id]?.state ?? "–";
     const acm = hass.states[config.entities.acm_temp];
     const heat = hass.states[config.entities.heat_temp];
@@ -135,47 +134,80 @@ class BoilerCard extends HTMLElement {
     this.pressure.innerText = `${getState(config.entities.pressure)} bar`;
 
     const flameOn = hass.states[config.entities.flame]?.state === "on";
-    this.flame.style.opacity = flameOn ? "1" : "0.2";
-    this.flame.style.filter = flameOn
-      ? "drop-shadow(0 0 20px red)"
-      : "none";
+    this.flame.style.opacity = flameOn ? "1" : "0.25";
+    this.flame.style.filter = flameOn ? "drop-shadow(0 0 12px red)" : "none";
 
-    // afișaj digital
-    this.acmBlock.display.innerText =
+    // ACM: afișăm ce primim, că poate are decimale
+    const acmVal =
       acm?.attributes?.current_temperature ??
       acm?.attributes?.temperature ??
       acm?.state ??
       "--";
-    this.heatBlock.display.innerText = getState(config.entities.heat_temp);
+    this.acmBlock.display.innerText = acmVal;
 
-    // servicii butoane
-    const callService = (domain, service, entity_id, data) => {
-      hass.callService(domain, service, { entity_id, ...data });
+    // HEAT: fără .0 dacă e întreg
+    const heatRaw = getState(config.entities.heat_temp);
+    const heatNum = Number(heatRaw);
+    let heatDisplay;
+    if (isNaN(heatNum)) {
+      heatDisplay = heatRaw;
+    } else {
+      heatDisplay = Number.isInteger(heatNum)
+        ? heatNum.toString()
+        : heatNum.toFixed(1);
+    }
+    this.heatBlock.display.innerText = heatDisplay;
+
+    // --- servicii ---
+    const callService = (domain, service, data) => {
+      hass.callService(domain, service, data);
     };
 
-    // ACM (water_heater)
-    this.acmBlock.plus.onclick = () =>
-      callService("water_heater", "set_temperature", config.entities.acm_temp, {
-        temperature: parseFloat(acm.attributes.temperature) + 1,
+    // ACM water_heater.set_temperature
+    this.acmBlock.plus.onclick = () => {
+      const current = Number(acm?.attributes?.temperature ?? acm?.state);
+      if (isNaN(current)) return;
+      callService("water_heater", "set_temperature", {
+        entity_id: config.entities.acm_temp,
+        temperature: current + 1,
       });
-    this.acmBlock.minus.onclick = () =>
-      callService("water_heater", "set_temperature", config.entities.acm_temp, {
-        temperature: parseFloat(acm.attributes.temperature) - 1,
-      });
+    };
 
-    // Heat (number)
-    this.heatBlock.plus.onclick = () =>
-      callService("number", "increment", config.entities.heat_temp);
-    this.heatBlock.minus.onclick = () =>
-      callService("number", "decrement", config.entities.heat_temp);
+    this.acmBlock.minus.onclick = () => {
+      const current = Number(acm?.attributes?.temperature ?? acm?.state);
+      if (isNaN(current)) return;
+      callService("water_heater", "set_temperature", {
+        entity_id: config.entities.acm_temp,
+        temperature: current - 1,
+      });
+    };
+
+    // HEAT number.set_value, nu increment/decrement
+    this.heatBlock.plus.onclick = () => {
+      const current = Number(heat?.state);
+      if (isNaN(current)) return;
+      callService("number", "set_value", {
+        entity_id: config.entities.heat_temp,
+        value: current + 1,
+      });
+    };
+
+    this.heatBlock.minus.onclick = () => {
+      const current = Number(heat?.state);
+      if (isNaN(current)) return;
+      callService("number", "set_value", {
+        entity_id: config.entities.heat_temp,
+        value: current - 1,
+      });
+    };
   }
 
   getCardSize() {
-    return 5;
+    return 3;
   }
 }
 
-// editor grafic pentru Lovelace
+// GUI editor
 class BoilerCardEditor extends HTMLElement {
   setConfig(config) {
     this.config = config;
@@ -184,6 +216,7 @@ class BoilerCardEditor extends HTMLElement {
 
   render() {
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    const c = this.config;
     const wrapper = document.createElement("div");
     wrapper.innerHTML = `
       <style>
@@ -192,7 +225,7 @@ class BoilerCardEditor extends HTMLElement {
           grid-template-columns: 1fr 1fr;
           gap: 12px;
         }
-        label { font-weight: bold; color: #fff; }
+        label { font-weight: bold; color: #fff; font-size: 13px; }
         input {
           width: 100%;
           padding: 6px;
@@ -210,17 +243,17 @@ class BoilerCardEditor extends HTMLElement {
       </style>
       <div class="editor">
         <label>Flame entity</label>
-        <input id="flame" value="${this.config.entities?.flame ?? ""}" />
+        <input id="flame" value="${c.entities?.flame ?? ""}" />
         <label>Out temp</label>
-        <input id="out" value="${this.config.entities?.out ?? ""}" />
+        <input id="out" value="${c.entities?.out ?? ""}" />
         <label>In temp</label>
-        <input id="in" value="${this.config.entities?.in ?? ""}" />
+        <input id="in" value="${c.entities?.in ?? ""}" />
         <label>Pressure</label>
-        <input id="pressure" value="${this.config.entities?.pressure ?? ""}" />
+        <input id="pressure" value="${c.entities?.pressure ?? ""}" />
         <label>ACM (water_heater)</label>
-        <input id="acm_temp" value="${this.config.entities?.acm_temp ?? ""}" />
-        <label>Heating temp</label>
-        <input id="heat_temp" value="${this.config.entities?.heat_temp ?? ""}" />
+        <input id="acm_temp" value="${c.entities?.acm_temp ?? ""}" />
+        <label>Heating temp (number)</label>
+        <input id="heat_temp" value="${c.entities?.heat_temp ?? ""}" />
       </div>
     `;
     this.shadowRoot.innerHTML = "";
@@ -240,7 +273,6 @@ class BoilerCardEditor extends HTMLElement {
   }
 }
 
-// înregistrare card și editor
 customElements.define("boiler-card", BoilerCard);
 customElements.define("boiler-card-editor", BoilerCardEditor);
 
@@ -251,8 +283,9 @@ window.customCards.push({
   description: "Smart boiler controller card with GUI configuration.",
 });
 
-// integrare GUI în Lovelace
-BoilerCard.getConfigElement = () => document.createElement("boiler-card-editor");
+BoilerCard.getConfigElement = () =>
+  document.createElement("boiler-card-editor");
+
 BoilerCard.getStubConfig = () => ({
   entities: {
     flame: "binary_sensor.example_flame",

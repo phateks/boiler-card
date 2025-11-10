@@ -21,9 +21,9 @@ class BoilerCard extends HTMLElement {
         .boiler-card {
           position: relative;
           width: 300px;
-          height: 460px;
+          height: 380px; /* redus de la 460px */
           border-radius: 12px;
-          background: linear-gradient(to bottom, #f2f2f2 75%, #3a3a3a 75%);
+          background: linear-gradient(to bottom, #f2f2f2 68%, #2f2f2f 68%);
           box-shadow: inset 0 0 0 2px #444;
           overflow: hidden;
           display: flex;
@@ -36,53 +36,62 @@ class BoilerCard extends HTMLElement {
           position: absolute;
           bottom: 0;
           width: 100%;
-          height: 120px;
+          height: 110px;
           background: linear-gradient(to bottom, #3b3b3b, #2b2b2b);
-          border-top-left-radius: 40px;
-          border-top-right-radius: 40px;
+          border-top-left-radius: 35px;
+          border-top-right-radius: 35px;
           display: flex;
-          justify-content: space-around;
+          justify-content: space-between;
           align-items: center;
+          padding: 0 25px;
         }
 
-        .panel .temp-block {
-          text-align: center;
+        .temp-block {
           color: white;
           display: flex;
           flex-direction: column;
-          justify-content: center;
           align-items: center;
-          min-width: 70px;
+          text-align: center;
+          width: 100px;
+        }
+
+        .value {
+          font-size: 1.4em;
+          font-weight: 600;
+          margin: 6px 0;
         }
 
         .btn {
           background: rgba(255,255,255,0.1);
           border: 1px solid rgba(255,255,255,0.3);
-          border-radius: 5px;
-          width: 30px;
-          height: 30px;
-          line-height: 30px;
-          font-size: 1.2em;
+          border-radius: 10px;
+          width: 45px;
+          height: 45px;
+          line-height: 45px;
+          font-size: 1.5em;
           cursor: pointer;
           user-select: none;
           color: #fff;
+          transition: background 0.2s ease;
         }
 
-        .btn:hover { background: rgba(255,255,255,0.25); }
+        .btn:hover {
+          background: rgba(255,255,255,0.3);
+        }
 
         .out, .in {
           position: absolute;
-          top: ${c.temp_top || "50px"};
+          top: ${c.temp_top || "40px"};
           font-weight: bold;
           font-size: 1.1em;
         }
 
-        .out { left: ${c.temp_out_left || "17%"}; color: #ff6600; }
-        .in { right: ${c.temp_in_right || "17%"}; color: #3399ff; }
+        .out { left: 15%; color: #ff6600; }
+        .in { right: 15%; color: #3399ff; }
 
         .flame {
           position: absolute;
-          top: 130px;
+          top: 105px;
           font-size: 100px;
           color: ${flameState ? "#ff3300" : "#555"};
           text-shadow: ${flameState ? "0 0 20px rgba(255,80,0,0.7)" : "none"};
@@ -91,15 +100,15 @@ class BoilerCard extends HTMLElement {
         }
 
         @keyframes flamePulse {
-          0%   { transform: scale(1) rotate(0deg); opacity: 0.85; }
-          30%  { transform: scale(1.05) rotate(-2deg); opacity: 1; }
-          60%  { transform: scale(0.97) rotate(2deg); opacity: 0.9; }
+          0% { transform: scale(1) rotate(0deg); opacity: 0.85; }
+          30% { transform: scale(1.07) rotate(-2deg); opacity: 1; }
+          60% { transform: scale(0.95) rotate(2deg); opacity: 0.9; }
           100% { transform: scale(1) rotate(0deg); opacity: 0.85; }
         }
 
         .pressure {
           position: absolute;
-          top: 240px;
+          top: 215px;
           font-size: 1.3em;
           font-weight: 500;
           color: ${pressure < 1 ? "#ff3333" : pressure > 2.5 ? "#ff9933" : "#444"};
@@ -110,26 +119,25 @@ class BoilerCard extends HTMLElement {
       <div class="boiler-card">
         <div class="out">OUT: ${outTemp}°C</div>
         <div class="in">IN: ${inTemp}°C</div>
+
         <ha-icon class="flame" icon="mdi:fire"></ha-icon>
         <div class="pressure">${pressure} bar</div>
 
         <div class="panel">
-          <div class="temp-block">
+          <div class="temp-block" style="align-items: flex-start;">
             <div class="btn" id="acm_up">+</div>
-            <div class="value">
-              ${
-                acm
-                  ? (acm.attributes.current_temperature ??
-                     acm.attributes.temperature ??
-                     acm.state)
-                  : "--"
-              }°C
-            </div>
+            <div class="value">${
+              acm
+                ? (acm.attributes.current_temperature ??
+                   acm.attributes.temperature ??
+                   acm.state)
+                : "--"
+            }°C</div>
             <div>ACM</div>
             <div class="btn" id="acm_down">−</div>
           </div>
 
-          <div class="temp-block">
+          <div class="temp-block" style="align-items: flex-end;">
             <div class="btn" id="heat_up">+</div>
             <div class="value">${heat ? heat.state : "--"}°C</div>
             <div>Heat</div>
@@ -139,7 +147,6 @@ class BoilerCard extends HTMLElement {
       </div>
     `;
 
-    // Event listeners
     root.querySelector("#acm_up")?.addEventListener("click", () =>
       this._adjustTemp(hass, c.entities.acm_temp, true)
     );
@@ -164,8 +171,8 @@ class BoilerCard extends HTMLElement {
       state.attributes.current_temperature ??
       state.state
     );
-
     if (isNaN(current)) return;
+
     const newTemp = increase ? current + 1 : current - 1;
 
     if (entityId.startsWith("water_heater.")) {
@@ -187,7 +194,7 @@ class BoilerCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 4;
+    return 3;
   }
 }
 
@@ -196,5 +203,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "boiler-card",
   name: "Boiler Card",
-  description: "Smart boiler control with animated flame and dynamic CSS layout.",
+  description: "Compact boiler control with bigger buttons and side-aligned temperatures.",
 });

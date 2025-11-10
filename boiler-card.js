@@ -140,7 +140,7 @@ class BoilerCard extends HTMLElement {
       </div>
     `;
 
-    // Handlers
+    // Event listeners
     root.querySelector("#acm_up")?.addEventListener("click", () =>
       this._adjustTemp(hass, c.entities.acm_temp, true)
     );
@@ -155,22 +155,42 @@ class BoilerCard extends HTMLElement {
     );
   }
 
+  // fixed temperature adjustment logic
   _adjustTemp(hass, entityId, increase = true) {
     if (!entityId) return;
     const state = hass.states[entityId];
     if (!state) return;
 
+    const current = Number(
+      state.attributes.temperature ??
+      state.attributes.current_temperature ??
+      state.state
+    );
+
+    if (isNaN(current)) return;
+    const newTemp = increase ? current + 1 : current - 1;
+
+    // water_heater
     if (entityId.startsWith("water_heater.")) {
-      const current = state.attributes.temperature ?? state.attributes.current_temperature ?? state.state;
-      const newTemp = increase ? Number(current) + 1 : Number(current) - 1;
       hass.callService("water_heater", "set_temperature", {
         entity_id: entityId,
         temperature: newTemp,
       });
-    } else if (entityId.startsWith("number.") || entityId.startsWith("input_number.")) {
-      const domain = entityId.split(".")[0];
-      hass.callService(domain, increase ? "increment" : "decrement", {
+    }
+
+    // climate
+    else if (entityId.startsWith("climate.")) {
+      hass.callService("climate", "set_temperature", {
         entity_id: entityId,
+        temperature: newTemp,
+      });
+    }
+
+    // number / input_number
+    else if (entityId.startsWith("number.") || entityId.startsWith("input_number.")) {
+      hass.callService("number", "set_value", {
+        entity_id: entityId,
+        value: newTemp,
       });
     }
   }
@@ -185,5 +205,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "boiler-card",
   name: "Boiler Card",
-  description: "Smart boiler control panel with built-in CSS design.",
+  description: "Smart boiler control panel with CSS graphics and flame animation.",
 });

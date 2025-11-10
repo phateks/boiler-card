@@ -48,6 +48,11 @@ class BoilerCard extends HTMLElement {
         .panel .temp-block {
           text-align: center;
           color: white;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          min-width: 70px;
         }
 
         .btn {
@@ -77,30 +82,28 @@ class BoilerCard extends HTMLElement {
 
         .flame {
           position: absolute;
-          top: ${c.flame_top || "140px"};
-          font-size: ${c.flame_size || "60px"};
-          color: ${flameState ? "red" : "#555"};
-          text-shadow: ${flameState ? "0 0 10px rgba(255,0,0,0.8)" : "none"};
-          animation: ${flameState ? "pulse 1.2s infinite" : "none"};
+          top: 130px;
+          font-size: 100px;
+          color: ${flameState ? "#ff3300" : "#555"};
+          text-shadow: ${flameState ? "0 0 20px rgba(255,80,0,0.7)" : "none"};
+          animation: ${flameState ? "flamePulse 1.5s infinite ease-in-out" : "none"};
           transition: all 0.3s ease;
         }
 
-        @keyframes pulse {
-          0% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.2); }
-          100% { opacity: 0.7; transform: scale(1); }
+        @keyframes flamePulse {
+          0%   { transform: scale(1) rotate(0deg); opacity: 0.85; }
+          30%  { transform: scale(1.05) rotate(-2deg); opacity: 1; }
+          60%  { transform: scale(0.97) rotate(2deg); opacity: 0.9; }
+          100% { transform: scale(1) rotate(0deg); opacity: 0.85; }
         }
 
         .pressure {
           position: absolute;
-          top: ${c.pressure_top || "190px"};
-          font-size: 1.2em;
-          color: #444;
+          top: 240px;
+          font-size: 1.3em;
           font-weight: 500;
+          color: ${pressure < 1 ? "#ff3333" : pressure > 2.5 ? "#ff9933" : "#444"};
         }
-
-        .pressure.low { color: #ff3333; }
-        .pressure.high { color: #ff9933; }
 
       </style>
 
@@ -108,9 +111,7 @@ class BoilerCard extends HTMLElement {
         <div class="out">OUT: ${outTemp}°C</div>
         <div class="in">IN: ${inTemp}°C</div>
         <ha-icon class="flame" icon="mdi:fire"></ha-icon>
-        <div class="pressure ${pressure < 1 ? "low" : pressure > 2.5 ? "high" : ""}">
-          ${pressure} bar
-        </div>
+        <div class="pressure">${pressure} bar</div>
 
         <div class="panel">
           <div class="temp-block">
@@ -130,9 +131,7 @@ class BoilerCard extends HTMLElement {
 
           <div class="temp-block">
             <div class="btn" id="heat_up">+</div>
-            <div class="value">
-              ${heat ? heat.state : "--"}°C
-            </div>
+            <div class="value">${heat ? heat.state : "--"}°C</div>
             <div>Heat</div>
             <div class="btn" id="heat_down">−</div>
           </div>
@@ -155,7 +154,6 @@ class BoilerCard extends HTMLElement {
     );
   }
 
-  // fixed temperature adjustment logic
   _adjustTemp(hass, entityId, increase = true) {
     if (!entityId) return;
     const state = hass.states[entityId];
@@ -170,24 +168,17 @@ class BoilerCard extends HTMLElement {
     if (isNaN(current)) return;
     const newTemp = increase ? current + 1 : current - 1;
 
-    // water_heater
     if (entityId.startsWith("water_heater.")) {
       hass.callService("water_heater", "set_temperature", {
         entity_id: entityId,
         temperature: newTemp,
       });
-    }
-
-    // climate
-    else if (entityId.startsWith("climate.")) {
+    } else if (entityId.startsWith("climate.")) {
       hass.callService("climate", "set_temperature", {
         entity_id: entityId,
         temperature: newTemp,
       });
-    }
-
-    // number / input_number
-    else if (entityId.startsWith("number.") || entityId.startsWith("input_number.")) {
+    } else if (entityId.startsWith("number.") || entityId.startsWith("input_number.")) {
       hass.callService("number", "set_value", {
         entity_id: entityId,
         value: newTemp,
@@ -205,5 +196,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "boiler-card",
   name: "Boiler Card",
-  description: "Smart boiler control panel with CSS graphics and flame animation.",
+  description: "Smart boiler control with animated flame and dynamic CSS layout.",
 });

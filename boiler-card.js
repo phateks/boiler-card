@@ -1,207 +1,227 @@
 class BoilerCard extends HTMLElement {
   setConfig(config) {
+    if (!config.entities) {
+      throw new Error("You need to define entities");
+    }
     this.config = config;
-    this.attachShadow({ mode: "open" });
   }
 
   set hass(hass) {
-    const c = this.config;
-    const root = this.shadowRoot;
-    if (!root) return;
+    const config = this.config;
+    if (!this.card) {
+      this.card = document.createElement("ha-card");
+      this.card.style.padding = "16px";
+      this.card.style.display = "flex";
+      this.card.style.flexDirection = "column";
+      this.card.style.alignItems = "center";
+      this.card.style.justifyContent = "center";
+      this.card.style.background = "linear-gradient(to bottom, #f6f6f6 70%, #2a2a2a 70%)";
+      this.card.style.borderRadius = "16px";
+      this.card.style.overflow = "hidden";
 
-    const flameState = hass.states[c.entities.flame]?.state === "on";
-    const outTemp = hass.states[c.entities.out]?.state ?? "--";
-    const inTemp = hass.states[c.entities.in]?.state ?? "--";
-    const pressure = hass.states[c.entities.pressure]?.state ?? "--";
-    const acm = c.entities.acm_temp ? hass.states[c.entities.acm_temp] : null;
-    const heat = c.entities.heat_temp ? hass.states[c.entities.heat_temp] : null;
+      // --- Wrapper principal
+      const wrapper = document.createElement("div");
+      wrapper.style.textAlign = "center";
+      wrapper.style.width = "100%";
+      wrapper.style.maxWidth = "320px";
+      wrapper.style.position = "relative";
 
-    root.innerHTML = `
-      <style>
-        .boiler-card {
-          position: relative;
-          width: 300px;
-          height: 380px; /* redus de la 460px */
-          border-radius: 12px;
-          background: linear-gradient(to bottom, #f2f2f2 68%, #2f2f2f 68%);
-          box-shadow: inset 0 0 0 2px #444;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: "Segoe UI", sans-serif;
-        }
+      // --- OUT / IN temps
+      this.outTemp = document.createElement("div");
+      this.inTemp = document.createElement("div");
+      this.outTemp.style.position = this.inTemp.style.position = "absolute";
+      this.outTemp.style.left = "10px";
+      this.outTemp.style.top = "10px";
+      this.inTemp.style.right = "10px";
+      this.inTemp.style.top = "10px";
+      this.outTemp.style.color = "orange";
+      this.inTemp.style.color = "dodgerblue";
+      this.outTemp.style.fontWeight = this.inTemp.style.fontWeight = "bold";
+      this.outTemp.style.fontSize = this.inTemp.style.fontSize = "18px";
 
-        .panel {
-          position: absolute;
-          bottom: 0;
-          width: 100%;
-          height: 110px;
-          background: linear-gradient(to bottom, #3b3b3b, #2b2b2b);
-          border-top-left-radius: 35px;
-          border-top-right-radius: 35px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 0 25px;
-        }
+      // --- Flame + pressure
+      this.flame = document.createElement("div");
+      this.flame.innerHTML = "🔥";
+      this.flame.style.fontSize = "100px";
+      this.flame.style.marginTop = "60px";
+      this.pressure = document.createElement("div");
+      this.pressure.style.fontSize = "18px";
+      this.pressure.style.marginTop = "10px";
+      this.pressure.style.color = "#444";
 
-        .temp-block {
-          color: white;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          width: 100px;
-        }
+      // --- Bottom control section
+      const controls = document.createElement("div");
+      controls.style.display = "flex";
+      controls.style.justifyContent = "space-between";
+      controls.style.width = "100%";
+      controls.style.padding = "20px 10px 10px 10px";
 
-        .value {
-          font-size: 1.4em;
-          font-weight: 600;
-          margin: 6px 0;
-        }
+      const createBlock = (label) => {
+        const block = document.createElement("div");
+        block.style.display = "flex";
+        block.style.flexDirection = "column";
+        block.style.alignItems = "center";
+        block.style.gap = "8px";
+        block.style.width = "45%";
 
-        .btn {
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.3);
-          border-radius: 10px;
-          width: 45px;
-          height: 45px;
-          line-height: 45px;
-          font-size: 1.5em;
-          cursor: pointer;
-          user-select: none;
-          color: #fff;
-          transition: background 0.2s ease;
-        }
+        const plus = document.createElement("button");
+        plus.innerText = "+";
+        const minus = document.createElement("button");
+        minus.innerText = "-";
+        [plus, minus].forEach(btn => {
+          btn.style.width = "50px";
+          btn.style.height = "50px";
+          btn.style.fontSize = "28px";
+          btn.style.borderRadius = "10px";
+          btn.style.border = "1px solid #555";
+          btn.style.background = "#333";
+          btn.style.color = "#fff";
+          btn.style.cursor = "pointer";
+        });
 
-        .btn:hover {
-          background: rgba(255,255,255,0.3);
-        }
+        const display = document.createElement("div");
+        display.style.fontFamily = "'Courier New', monospace";
+        display.style.fontSize = "32px";
+        display.style.color = "#00ff66";
+        display.style.background = "#000";
+        display.style.padding = "5px 15px";
+        display.style.borderRadius = "8px";
+        display.style.boxShadow = "0 0 8px #00ff66 inset";
 
-        .out, .in {
-          position: absolute;
-          top: ${c.temp_top || "40px"};
-          font-weight: bold;
-          font-size: 1.1em;
-        }
+        const labelEl = document.createElement("div");
+        labelEl.innerText = label;
+        labelEl.style.color = "#fff";
+        labelEl.style.fontWeight = "500";
 
-        .out { left: 15%; color: #ff6600; }
-        .in { right: 15%; color: #3399ff; }
+        block.appendChild(plus);
+        block.appendChild(display);
+        block.appendChild(labelEl);
+        block.appendChild(minus);
 
-        .flame {
-          position: absolute;
-          top: 105px;
-          font-size: 100px;
-          color: ${flameState ? "#ff3300" : "#555"};
-          text-shadow: ${flameState ? "0 0 20px rgba(255,80,0,0.7)" : "none"};
-          animation: ${flameState ? "flamePulse 1.5s infinite ease-in-out" : "none"};
-          transition: all 0.3s ease;
-        }
+        block.plus = plus;
+        block.minus = minus;
+        block.display = display;
+        return block;
+      };
 
-        @keyframes flamePulse {
-          0% { transform: scale(1) rotate(0deg); opacity: 0.85; }
-          30% { transform: scale(1.07) rotate(-2deg); opacity: 1; }
-          60% { transform: scale(0.95) rotate(2deg); opacity: 0.9; }
-          100% { transform: scale(1) rotate(0deg); opacity: 0.85; }
-        }
+      this.acmBlock = createBlock("ACM");
+      this.heatBlock = createBlock("Heat");
 
-        .pressure {
-          position: absolute;
-          top: 215px;
-          font-size: 1.3em;
-          font-weight: 500;
-          color: ${pressure < 1 ? "#ff3333" : pressure > 2.5 ? "#ff9933" : "#444"};
-        }
+      controls.appendChild(this.acmBlock);
+      controls.appendChild(this.heatBlock);
 
-      </style>
-
-      <div class="boiler-card">
-        <div class="out">OUT: ${outTemp}°C</div>
-        <div class="in">IN: ${inTemp}°C</div>
-
-        <ha-icon class="flame" icon="mdi:fire"></ha-icon>
-        <div class="pressure">${pressure} bar</div>
-
-        <div class="panel">
-          <div class="temp-block" style="align-items: flex-start;">
-            <div class="btn" id="acm_up">+</div>
-            <div class="value">${
-              acm
-                ? (acm.attributes.current_temperature ??
-                   acm.attributes.temperature ??
-                   acm.state)
-                : "--"
-            }°C</div>
-            <div>ACM</div>
-            <div class="btn" id="acm_down">−</div>
-          </div>
-
-          <div class="temp-block" style="align-items: flex-end;">
-            <div class="btn" id="heat_up">+</div>
-            <div class="value">${heat ? heat.state : "--"}°C</div>
-            <div>Heat</div>
-            <div class="btn" id="heat_down">−</div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    root.querySelector("#acm_up")?.addEventListener("click", () =>
-      this._adjustTemp(hass, c.entities.acm_temp, true)
-    );
-    root.querySelector("#acm_down")?.addEventListener("click", () =>
-      this._adjustTemp(hass, c.entities.acm_temp, false)
-    );
-    root.querySelector("#heat_up")?.addEventListener("click", () =>
-      this._adjustTemp(hass, c.entities.heat_temp, true)
-    );
-    root.querySelector("#heat_down")?.addEventListener("click", () =>
-      this._adjustTemp(hass, c.entities.heat_temp, false)
-    );
-  }
-
-  _adjustTemp(hass, entityId, increase = true) {
-    if (!entityId) return;
-    const state = hass.states[entityId];
-    if (!state) return;
-
-    const current = Number(
-      state.attributes.temperature ??
-      state.attributes.current_temperature ??
-      state.state
-    );
-    if (isNaN(current)) return;
-
-    const newTemp = increase ? current + 1 : current - 1;
-
-    if (entityId.startsWith("water_heater.")) {
-      hass.callService("water_heater", "set_temperature", {
-        entity_id: entityId,
-        temperature: newTemp,
-      });
-    } else if (entityId.startsWith("climate.")) {
-      hass.callService("climate", "set_temperature", {
-        entity_id: entityId,
-        temperature: newTemp,
-      });
-    } else if (entityId.startsWith("number.") || entityId.startsWith("input_number.")) {
-      hass.callService("number", "set_value", {
-        entity_id: entityId,
-        value: newTemp,
-      });
+      // --- Final assembly
+      wrapper.appendChild(this.outTemp);
+      wrapper.appendChild(this.inTemp);
+      wrapper.appendChild(this.flame);
+      wrapper.appendChild(this.pressure);
+      wrapper.appendChild(controls);
+      this.card.appendChild(wrapper);
+      this.appendChild(this.card);
     }
+
+    // === actualizare date din entități ===
+    const getState = (id) => hass.states[id]?.state ?? "–";
+    const acm = hass.states[config.entities.acm_temp];
+    const heat = hass.states[config.entities.heat_temp];
+
+    this.outTemp.innerText = `OUT: ${getState(config.entities.out)}°C`;
+    this.inTemp.innerText = `IN: ${getState(config.entities.in)}°C`;
+    this.pressure.innerText = `${getState(config.entities.pressure)} bar`;
+
+    const flameOn = hass.states[config.entities.flame]?.state === "on";
+    this.flame.style.opacity = flameOn ? "1" : "0.2";
+    this.flame.style.filter = flameOn ? "drop-shadow(0 0 20px red)" : "none";
+
+    // valori afișaj digital
+    this.acmBlock.display.innerText =
+      acm?.attributes?.current_temperature ?? acm?.attributes?.temperature ?? acm?.state ?? "--";
+    this.heatBlock.display.innerText = getState(config.entities.heat_temp);
+
+    // === controale butoane ===
+    const callService = (domain, service, entity_id, value) => {
+      hass.callService(domain, service, { entity_id, value });
+    };
+
+    // ACM
+    this.acmBlock.plus.onclick = () => callService("water_heater", "set_temperature", config.entities.acm_temp, parseFloat(acm.attributes.temperature) + 1);
+    this.acmBlock.minus.onclick = () => callService("water_heater", "set_temperature", config.entities.acm_temp, parseFloat(acm.attributes.temperature) - 1);
+
+    // HEAT
+    this.heatBlock.plus.onclick = () => callService("number", "increment", config.entities.heat_temp);
+    this.heatBlock.minus.onclick = () => callService("number", "decrement", config.entities.heat_temp);
   }
 
   getCardSize() {
-    return 3;
+    return 5;
   }
 }
 
 customElements.define("boiler-card", BoilerCard);
+
+
+// === GUI EDITOR ===
+class BoilerCardEditor extends HTMLElement {
+  setConfig(config) {
+    this.config = config;
+    this.render();
+  }
+
+  render() {
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = `
+      <style>
+        .editor {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        label { font-weight: bold; }
+        select, input {
+          width: 100%;
+          padding: 6px;
+          border-radius: 6px;
+          border: 1px solid #555;
+          background: #222;
+          color: #fff;
+        }
+      </style>
+      <div class="editor">
+        <label>Flame entity</label>
+        <input id="flame" value="${this.config.entities?.flame ?? ""}" />
+        <label>Out temp</label>
+        <input id="out" value="${this.config.entities?.out ?? ""}" />
+        <label>In temp</label>
+        <input id="in" value="${this.config.entities?.in ?? ""}" />
+        <label>Pressure</label>
+        <input id="pressure" value="${this.config.entities?.pressure ?? ""}" />
+        <label>ACM (water_heater)</label>
+        <input id="acm_temp" value="${this.config.entities?.acm_temp ?? ""}" />
+        <label>Heating temp</label>
+        <input id="heat_temp" value="${this.config.entities?.heat_temp ?? ""}" />
+      </div>
+    `;
+    this.shadowRoot.innerHTML = "";
+    this.shadowRoot.appendChild(wrapper);
+    this.shadowRoot.querySelectorAll("input").forEach(input => {
+      input.addEventListener("change", (e) => this._valueChanged(e));
+    });
+  }
+
+  _valueChanged(ev) {
+    const newConfig = JSON.parse(JSON.stringify(this.config));
+    newConfig.entities = newConfig.entities || {};
+    newConfig.entities[ev.target.id] = ev.target.value;
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig } }));
+  }
+}
+
+customElements.define("boiler-card-editor", BoilerCardEditor);
+
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "boiler-card",
   name: "Boiler Card",
-  description: "Compact boiler control with bigger buttons and side-aligned temperatures.",
+  description: "Smart boiler controller card with GUI configuration."
 });

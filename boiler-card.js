@@ -1,6 +1,5 @@
 class BoilerCard extends HTMLElement {
   setConfig(config) {
-    if (!config.image) throw new Error("Image path is required.");
     this.config = config;
     this.attachShadow({ mode: "open" });
   }
@@ -9,6 +8,7 @@ class BoilerCard extends HTMLElement {
     const c = this.config;
     const root = this.shadowRoot;
     if (!root) return;
+
     const flameState = hass.states[c.entities.flame]?.state === "on";
     const outTemp = hass.states[c.entities.out]?.state ?? "--";
     const inTemp = hass.states[c.entities.in]?.state ?? "--";
@@ -20,64 +20,34 @@ class BoilerCard extends HTMLElement {
       <style>
         .boiler-card {
           position: relative;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background: url(${c.image}) no-repeat center/contain;
           width: 300px;
-          height: 480px;
-          color: #fff;
+          height: 460px;
+          border-radius: 12px;
+          background: linear-gradient(to bottom, #f2f2f2 75%, #3a3a3a 75%);
+          box-shadow: inset 0 0 0 2px #444;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           font-family: "Segoe UI", sans-serif;
         }
 
-        .out, .in, .pressure {
+        .panel {
           position: absolute;
-          font-weight: bold;
-        }
-
-        .out {
-          top: ${c.temp_top || "50px"};
-          left: ${c.temp_out_left || "17%"};
-          color: #ff6600;
-        }
-
-        .in {
-          top: ${c.temp_top || "50px"};
-          right: ${c.temp_in_right || "17%"};
-          color: #33a1ff;
-        }
-
-        .pressure {
-          top: ${c.pressure_top || "185px"};
-          color: #ddd;
-          font-size: 1.2em;
-        }
-
-        .flame {
-          position: absolute;
-          top: ${c.flame_top || "120px"};
-          font-size: ${c.flame_size || "60px"};
-          color: ${flameState ? "red" : "#444"};
-          animation: ${flameState ? "pulse 1s infinite" : "none"};
-          transition: color 0.3s ease;
-        }
-
-        @keyframes pulse {
-          0% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.15); }
-          100% { opacity: 0.7; transform: scale(1); }
-        }
-
-        .temps {
-          position: absolute;
-          bottom: 20px;
+          bottom: 0;
+          width: 100%;
+          height: 120px;
+          background: linear-gradient(to bottom, #3b3b3b, #2b2b2b);
+          border-top-left-radius: 40px;
+          border-top-right-radius: 40px;
           display: flex;
-          width: 80%;
           justify-content: space-around;
+          align-items: center;
         }
 
-        .temp-block {
+        .panel .temp-block {
           text-align: center;
+          color: white;
         }
 
         .btn {
@@ -86,31 +56,63 @@ class BoilerCard extends HTMLElement {
           border-radius: 5px;
           width: 30px;
           height: 30px;
-          color: white;
-          font-size: 1.2em;
           line-height: 30px;
-          margin: 3px;
+          font-size: 1.2em;
           cursor: pointer;
           user-select: none;
+          color: #fff;
         }
 
-        .btn:hover {
-          background: rgba(255,255,255,0.2);
-        }
+        .btn:hover { background: rgba(255,255,255,0.25); }
 
-        .value {
-          font-size: 1.2em;
+        .out, .in {
+          position: absolute;
+          top: ${c.temp_top || "50px"};
           font-weight: bold;
+          font-size: 1.1em;
         }
+
+        .out { left: ${c.temp_out_left || "17%"}; color: #ff6600; }
+        .in { right: ${c.temp_in_right || "17%"}; color: #3399ff; }
+
+        .flame {
+          position: absolute;
+          top: ${c.flame_top || "140px"};
+          font-size: ${c.flame_size || "60px"};
+          color: ${flameState ? "red" : "#555"};
+          text-shadow: ${flameState ? "0 0 10px rgba(255,0,0,0.8)" : "none"};
+          animation: ${flameState ? "pulse 1.2s infinite" : "none"};
+          transition: all 0.3s ease;
+        }
+
+        @keyframes pulse {
+          0% { opacity: 0.7; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.2); }
+          100% { opacity: 0.7; transform: scale(1); }
+        }
+
+        .pressure {
+          position: absolute;
+          top: ${c.pressure_top || "190px"};
+          font-size: 1.2em;
+          color: #444;
+          font-weight: 500;
+        }
+
+        .pressure.low { color: #ff3333; }
+        .pressure.high { color: #ff9933; }
+
       </style>
 
       <div class="boiler-card">
         <div class="out">OUT: ${outTemp}°C</div>
         <div class="in">IN: ${inTemp}°C</div>
         <ha-icon class="flame" icon="mdi:fire"></ha-icon>
-        <div class="pressure">${pressure} bar</div>
+        <div class="pressure ${pressure < 1 ? "low" : pressure > 2.5 ? "high" : ""}">
+          ${pressure} bar
+        </div>
 
-        <div class="temps">
+        <div class="panel">
           <div class="temp-block">
             <div class="btn" id="acm_up">+</div>
             <div class="value">
@@ -138,7 +140,7 @@ class BoilerCard extends HTMLElement {
       </div>
     `;
 
-    // Event handlers
+    // Handlers
     root.querySelector("#acm_up")?.addEventListener("click", () =>
       this._adjustTemp(hass, c.entities.acm_temp, true)
     );
@@ -158,7 +160,6 @@ class BoilerCard extends HTMLElement {
     const state = hass.states[entityId];
     if (!state) return;
 
-    // water_heater entity
     if (entityId.startsWith("water_heater.")) {
       const current = state.attributes.temperature ?? state.attributes.current_temperature ?? state.state;
       const newTemp = increase ? Number(current) + 1 : Number(current) - 1;
@@ -166,20 +167,7 @@ class BoilerCard extends HTMLElement {
         entity_id: entityId,
         temperature: newTemp,
       });
-    }
-
-    // climate entity
-    else if (entityId.startsWith("climate.")) {
-      const current = state.attributes.temperature ?? state.state;
-      const newTemp = increase ? Number(current) + 1 : Number(current) - 1;
-      hass.callService("climate", "set_temperature", {
-        entity_id: entityId,
-        temperature: newTemp,
-      });
-    }
-
-    // input_number or number entity
-    else if (entityId.startsWith("input_number.") || entityId.startsWith("number.")) {
+    } else if (entityId.startsWith("number.") || entityId.startsWith("input_number.")) {
       const domain = entityId.split(".")[0];
       hass.callService(domain, increase ? "increment" : "decrement", {
         entity_id: entityId,
@@ -197,5 +185,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "boiler-card",
   name: "Boiler Card",
-  description: "Smart boiler control panel with flame animation and temperature controls.",
+  description: "Smart boiler control panel with built-in CSS design.",
 });
